@@ -74,6 +74,11 @@ make TARGET=master run  # build and run
 `make TARGET=<t> DEBUG=0` produces a release build; `make TARGET=<t> vlg` runs it
 under Valgrind.
 
+> **Build verified** on Ubuntu 24.04 with g++ 13.3 and MySQL Connector/C++ 1.1.12.
+> Both `master` and `minion` compile and link cleanly. `minion.out N` starts and
+> binds its configured UDP port; `master.out` additionally requires the `nbd` kernel
+> module (`sudo modprobe nbd`) and a reachable MySQL instance.
+
 ---
 
 ## Configuration
