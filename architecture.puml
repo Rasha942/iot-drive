@@ -1,25 +1,33 @@
 @startuml IOT Drive
+title IOT Drive — Distributed Network Block Device (RAID 10)
 left to right direction
 
-[*] --> NBD
-NBD -left-> Reactor : TCP Message
-Reactor --> ICallback : Activate Interface
-ICallback --> IInputProxy : Activate Interface
-IInputProxy --> ICallback : Return IArgsKey
-ICallback --> ITask : Pass IArgsKey as Parameters
-ITask --> ThreadPool : Scheduled for Execution
-ITask --> Factory : Request ICommand using Key
-Factory --> ITask : Provide ICommand
-ITask --> ICommand : Activate
-ICommand --> RAID10 : Access Storage System
-RAID10 --> ICommand : Return Primary & Backup Minions
-ICommand -left-> ResponseManager : Request UID for Message
-ResponseManager --> ICommand : Return UID
-ICommand --> IMinion : Send UDP Message
-IMinion --> Reactor : Send Confirmation Message
-Reactor --> ICallback : Handle Response
-ICallback --> ResponseProxy : Activate Specialized IInputProxy
-ResponseProxy --> ResponseManager : Update UID Status
-ResponseProxy --> NBD : Notify Completion
+[*] --> NBD : kernel block I/O on /dev/nbd0
+
+' ---- Master node: accept request and dispatch ----
+NBD --> NBDProxy : TCP request (NBDReadMsg / NBDWriteMsg)
+NBDProxy --> Reactor : fd registered as callback
+Reactor --> NBDProxy : readable -> GetArgsKey (IArgsKey)
+NBDProxy --> ThreadPool : schedule task
+ThreadPool --> Factory : ICommand for message key
+Factory --> ThreadPool : Read / Write Command
+ThreadPool --> Command : Execute
+Command --> Raid01 : OffsetToProxy(offset)
+Raid01 --> Command : primary (+ backup) MinionProxy
+Command --> ResponseManager : RegisterCommand -> UID
+Command --> MinionProxy : Read/WriteRequest(UID)
+MinionProxy --> Minion : UDP request
+
+' ---- Minion node: persist / fetch the block ----
+Minion --> MasterProxy : UDP datagram
+MasterProxy --> MinionCmd : Minion Read / Write Command
+MinionCmd --> Storage : seek + read/write minionN.bin
+MinionCmd --> ResponseProxy : Read/WriteResponse(UID, data) over UDP
+
+' ---- Master node: correlate response and reply ----
+ResponseProxy --> ResponseManager : RegisterResponse(UID)
+ResponseProxy --> NBDProxy : NotifySucces(data) once UID(s) confirmed
+NBDProxy --> NBD : TCP reply
+NBD --> [*] : completion to kernel
 
 @enduml

@@ -1,37 +1,37 @@
 @startuml ReactorFlow
+title Write path — RAID 10 mirrored write (primary + backup)
 
 skinparam ArrowColor black
 skinparam BackgroundColor white
 skinparam SequenceBoxBackgroundColor lightgrey
 
-actor User
-entity "NBD" as NBD
-entity "Reactor" as Reactor
-entity "ThreadPool" as ThreadPool
-entity "Command" as Command
-entity "CommunicationManager" as Manager
-entity "RAID" as RAID
-entity "MinionProxyUDP" as Minion
-entity "UDP Socket (central)" as UDPSocket
-entity "UID Manager" as UIDManager
-entity "ResponseManager" as ResponseManager
+actor Kernel
+participant "NBD / BUSE" as NBD
+participant "NBDProxy\n(Reactor, TCP)" as NBDProxy
+participant "ThreadPool" as TP
+participant "WriteCommand" as CMD
+participant "Raid01" as RAID
+participant "ResponseManager" as RM
+participant "MinionProxy x2" as MP
+participant "Minion\n(primary + backup)" as MIN
+participant "ResponseProxy\n(Reactor, UDP)" as RP
 
-User --> NBD : Perform file operation
-NBD --> Reactor : TCP request
-Reactor --> ThreadPool : Create task
-ThreadPool --> Command : Instantiate Command
-Command --> Manager : Manage operation
-Manager --> RAID : Get minions
-RAID --> Manager : Return minions
-Manager --> UIDManager : Generate UIDs
-UIDManager --> Manager : Return UIDs
-Manager --> Minion : Send commands
-Minion --> UDPSocket : Send message
-UDPSocket --> Reactor : Receive response
-Reactor --> ThreadPool : Response task
-ThreadPool --> Command : ResponseCommand
-Command --> ResponseManager : Handle response
-ResponseManager --> Manager : Validate & update
-Manager --> Command : Return result
+Kernel -> NBD : write(offset, 4 KB)
+NBD -> NBDProxy : TCP NBDWriteMsg
+NBDProxy -> TP : schedule WriteArgsKey
+TP -> CMD : Execute()
+CMD -> RAID : OffsetToProxy(offset)
+RAID --> CMD : primary + backup minion
+CMD -> RM : RegisterCommand() x2
+RM --> CMD : og_uid, backup_uid
+CMD -> MP : WriteRequest(data, uid) x2
+MP -> MIN : UDP WriteMsg (to primary and backup)
+MIN -> MIN : seek + write minionN.bin
+MIN -> RP : UDP MinionWriteMsg(uid, ok)
+RP -> RM : RegisterResponse(uid)
+note over CMD, RM : WriteAIFunc polls until\nHasResponseRecived(og_uid) && HasResponseRecived(backup_uid)
+RP -> NBDProxy : NotifySucces() once both confirmed
+NBDProxy -> NBD : TCP ack
+NBD --> Kernel : write complete
 
 @enduml
