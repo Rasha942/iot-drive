@@ -225,20 +225,27 @@ std::shared_ptr<IArgsKey> ResponseProxy::GetArgsKey(int fd, Reactor::Mode)
 
 MasterProxy::MasterProxy(const char* sock_port):m_socket(std::make_shared<UDPSocket>(sock_port,"127.0.1.1")), m_response_socket(std::make_shared<UDPSocket>(UDP_PORT_MASTER,"127.0.1.1",ASocket::CLINT))
 {
-    if(strcmp(sock_port, UDP_PORT_MINION_1))
+    // strcmp() returns 0 on a match, so test against 0 to pick this minion's file.
+    const char* filename = "minion3.bin";
+    if(0 == strcmp(sock_port, UDP_PORT_MINION_1))
     {
-        bin_file.open("minion1.bin", std::ios::binary | std::ios::in | std::ios::out);
-
+        filename = "minion1.bin";
     }
-    else if(strcmp(sock_port, UDP_PORT_MINION_2))
+    else if(0 == strcmp(sock_port, UDP_PORT_MINION_2))
     {
-        bin_file.open("minion2.bin", std::ios::binary | std::ios::in | std::ios::out);
-
+        filename = "minion2.bin";
     }
-    else
-    {
-        bin_file.open("minion3.bin", std::ios::binary | std::ios::in | std::ios::out);
 
+    // An in|out fstream will not create a missing file, so create it first if
+    // needed; otherwise the stream fails silently and all storage I/O is lost.
+    bin_file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+    if(!bin_file.is_open())
+    {
+        bin_file.clear();
+        bin_file.open(filename, std::ios::binary | std::ios::out);
+        bin_file.close();
+        bin_file.clear();
+        bin_file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
     }
     Singleton<Factory<int, std::shared_ptr<WriteMsg>>>::GetInstance()->AddCtor(WRITE_MSG_KEY, CreateWriteMsg);
     Singleton<Factory<int, std::shared_ptr<ReadMsg>>>::GetInstance()->AddCtor(READ_MSG_KEY, CreateReadMsg);
