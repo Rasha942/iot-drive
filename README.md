@@ -59,6 +59,7 @@ that tracks per-request UIDs so replicated writes can be confirmed.
 - `g++` with C++20 support (tested on g++ 13)
 - [`libmysqlcppconn-dev`](https://dev.mysql.com/downloads/connector/cpp/) (MySQL Connector/C++)
 - [SimpleIni](https://github.com/brofield/simpleini) headers in `/usr/include/simpleini`
+- `nbd-client` (`sudo apt install nbd-client`) — used to cleanly disconnect `/dev/nbd0` during teardown
 
 ### Compile
 
