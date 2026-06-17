@@ -77,7 +77,17 @@ under Valgrind.
 > **Build verified** on Ubuntu 24.04 with g++ 13.3 and MySQL Connector/C++ 1.1.12.
 > Both `master` and `minion` compile and link cleanly. `minion.out N` starts and
 > binds its configured UDP port; `master.out` additionally requires the `nbd` kernel
-> module (`sudo modprobe nbd`) and a reachable MySQL instance.
+> module (`sudo modprobe nbd`).
+
+### Run a local cluster
+
+Once both targets are built, [`scripts/demo.sh`](scripts/demo.sh) brings up 3 minions
+and a master, then writes a pattern through `/dev/nbd0`, reads it back, and verifies
+the round-trip across the cluster. The master attaches an NBD device, so run it as root:
+
+```bash
+sudo ./scripts/demo.sh
+```
 
 ---
 
