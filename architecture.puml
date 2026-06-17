@@ -1,0 +1,25 @@
+@startuml IOT Drive
+left to right direction
+
+[*] --> NBD
+NBD -left-> Reactor : TCP Message
+Reactor --> ICallback : Activate Interface
+ICallback --> IInputProxy : Activate Interface
+IInputProxy --> ICallback : Return IArgsKey
+ICallback --> ITask : Pass IArgsKey as Parameters
+ITask --> ThreadPool : Scheduled for Execution
+ITask --> Factory : Request ICommand using Key
+Factory --> ITask : Provide ICommand
+ITask --> ICommand : Activate
+ICommand --> RAID10 : Access Storage System
+RAID10 --> ICommand : Return Primary & Backup Minions
+ICommand -left-> ResponseManager : Request UID for Message
+ResponseManager --> ICommand : Return UID
+ICommand --> IMinion : Send UDP Message
+IMinion --> Reactor : Send Confirmation Message
+Reactor --> ICallback : Handle Response
+ICallback --> ResponseProxy : Activate Specialized IInputProxy
+ResponseProxy --> ResponseManager : Update UID Status
+ResponseProxy --> NBD : Notify Completion
+
+@enduml

@@ -1,0 +1,27 @@
+# Build output
+objs/*.o
+libs/*.so
+libs/*.a
+progs/*.out
+*.o
+*.so
+*.a
+*.out
+
+# Local config with real credentials (commit config.ini.example instead)
+config.ini
+
+# Runtime / data
+logs/
+*.log
+*.bin
+*.db
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Node (not used by the C++ build)
+node_modules/
